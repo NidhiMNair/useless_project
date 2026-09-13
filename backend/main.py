@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import httpx
 
-# Load environment variables
+# Load environment variables from .env file
 env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
@@ -22,7 +22,7 @@ logger = logging.getLogger("unnecessary_search")
 
 app = FastAPI(
     title="The Internet's Most Unnecessary Search Engine API",
-    description="Backend API powered by FastAPI, Gemini/Grok LLM, and Absurd Offline Fallback.",
+    description="Backend API powered by FastAPI, Gemini LLM, and Absurd Offline Fallback.",
     version="1.0.0",
 )
 
@@ -40,18 +40,19 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permissive for local hackathon demo
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Pydantic Schemas
 class SearchRequest(BaseModel):
     query: str = Field(
         ...,
         description="The overthought question to analyze",
-        example="Why did my friend say 'k'?",
+        example="Where am I?",
     )
 
 
@@ -73,7 +74,7 @@ class SearchResponse(BaseModel):
     confidence: str = Field(..., description="Comedic confidence label")
     engine: str = Field(
         default="AI Multiverse Core",
-        description="Engine used (Gemini, Grok, or Offline Oracle)"
+        description="Engine used (Google Gemini, Grok, or Offline Oracle)"
     )
 
 
@@ -139,22 +140,26 @@ def normalize_probabilities(possibilities: list) -> List[dict]:
     return possibilities
 
 
-SYSTEM_PROMPT = """You are the intelligence engine behind "The Internet's Most Unnecessary Search Engine".
-Your purpose is to analyze a user's mundane, innocent, or overthought question and generate entertaining, increasingly ridiculous possibilities.
+SYSTEM_PROMPT = """You are the comedy intelligence engine behind "The Internet's Most Unnecessary Search Engine".
+Your sole purpose is to take ANY user question—no matter how simple, random, personal, or weird—and overthink it into 5 hilarious, witty, unhinged, and hyper-specific possibilities that strictly escalate in absurdity.
 
-IMPORTANT RULES:
-1. The possibilities must be specifically tailored to the context of the user's question.
-2. The 5 possibilities MUST strictly escalate in absurdity:
-   - Possibility #1 (Mundane Reality): Plausible, ordinary, practical.
-   - Possibility #2 (Mild Paranoia): Realistic but slightly suspicious.
-   - Possibility #3 (Overanalyzed Vortex): Noticeably overthought, reading way too deep into micro-details.
-   - Possibility #4 (Conspiracy Grade): Ridiculous, theatrical, borderline unhinged.
-   - Possibility #5 (Multiverse Catastrophe): Completely absurd, existential, quantum conspiracy.
-3. Probabilities must be integers between 1 and 100, generally descending from #1 to #5, summing near 100.
-4. "recommended_action": Exactly one hilarious, intentionally terrible/overkill action the user should take.
-5. "confidence": One punchy humorous confidence rating (e.g., "99.2% Unearned Certainty", "Suspiciously Specific", "Quantum-Certified Delusion").
+HUMOR & TONE GUIDELINES:
+- Be witty, sarcastic, ultra-relatable, and hilariously hyper-specific (use specific details like "14 open Wikipedia tabs", "a half-eaten bagel from Tuesday", "47 seconds of eye contact", "a passive-aggressive thumbs-up emoji").
+- Every single possibility MUST directly connect to the user's specific query with extreme comedic flair.
 
-Respond ONLY with valid JSON conforming to:
+THE 5 ESCALATING TIERS:
+- Possibility #1 (Mundane Reality): Hilariously honest everyday reality (e.g. "You've been slouching in your desk chair for 40 minutes doing zero productive work while pretending to look intensely focused.").
+- Possibility #2 (Mild Paranoia): Speculative overthinking (e.g. "Your coworker saw you eating chips at 10 AM and has quietly classified you as an unpredictable wildcard.").
+- Possibility #3 (Overanalyzed Vortex): Unravelling logic & over-analysis (e.g. "You breached an unwritten social contract, initiating an infinite loop of mutual awkwardness where both of you are now planning to move cities.").
+- Possibility #4 (Conspiracy Grade): Unhinged, theatrical conspiracy (e.g. "Your smart fridge is secretly reporting your snack intervals directly to the FBI under Section 4 of the National Panic Act.").
+- Possibility #5 (Multiverse Catastrophe): Quantum absurd meltdown (e.g. "You accidentally triggered a localized tear in spacetime, swapping your consciousness with a hologram in an alien museum exhibit titled 'Humans Before Naps'.").
+
+OUTPUT SPECIFICATIONS:
+- "possibilities": Array of 5 items with "text" and integer "probability" (descending order, summing near 100).
+- "recommended_action": ONE hilariously overkill, ridiculous action tailored to the query (e.g., "Melt your SIM card in a fondue pot, adopt 4 raccoons, and move to a remote yurt in Greenland.").
+- "confidence": Punchy comedic rating (e.g., "100% Unearned Brainrot", "Certified Desk-Sitting Paranoia", "104% Suspicious Certainty").
+
+Respond ONLY with valid JSON matching:
 {
   "possibilities": [
     {"text": "...", "probability": 40},
@@ -170,29 +175,40 @@ Respond ONLY with valid JSON conforming to:
 
 def generate_offline_absurdities(query: str) -> dict:
     """
-    Context-sensitive offline fallback generator for live demos without API keys or on network failure.
+    Context-sensitive offline fallback generator for live demos or offline testing.
+    Handles location questions ("where am I"), text messages, workplace paranoia, food, etc.
     """
     q_lower = query.lower()
-    
-    # Context-specific templates
-    if any(k in q_lower for k in ["'k'", " k ", " k", "text", "message", "reply", "ghost", "left on read"]):
+
+    if any(k in q_lower for k in ["where am i", "where i am", "where am i?", "my location"]):
+        possibilities = [
+            {"text": "You are sitting in your chair at home or office, doing absolutely nothing productive while pretending to look extremely busy.", "probability": 44},
+            {"text": "You are at your workplace desk, pretending to read documentation while secretly playing with the office dog or gossiping with colleagues.", "probability": 28},
+            {"text": "You are trapped in a simulated living room loop where you've opened the refrigerator 4 times in 20 minutes expecting new food to spawn.", "probability": 16},
+            {"text": "You are currently in an elaborate escape room designed by HR to test your tolerance for awkward small talk.", "probability": 8},
+            {"text": "You are a hologram projected inside an alien zoo exhibit labeled 'Homo Sapiens: Frequently Overthinking'.", "probability": 4},
+        ]
+        action = "Look directly at the ceiling light, nod twice to the hidden cameras, and whisper 'I know what you did'."
+        confidence = "99.4% Spatial Paranoia"
+
+    elif any(k in q_lower for k in ["'k'", " k ", " k", "text", "message", "reply", "ghost", "left on read"]):
         possibilities = [
             {"text": "They were walking into an elevator or typing while their battery was at 1%.", "probability": 42},
             {"text": "They thought 'ok' sounded too formal and wanted to maintain casual aloofness.", "probability": 28},
             {"text": "They drafted an affectionate 4-paragraph response, panicked, deleted it, and settled on passive-aggressive minimalism.", "probability": 17},
-            {"text": "Their phone was intercepted by Russian intelligence who only know how to communicate in monosyllables.", "probability": 9},
-            {"text": "The letter 'K' represents the 11th hour of the apocalypse; your friendship has shifted into an alternate timeline where vowels are illegal.", "probability": 4},
+            {"text": "Their phone was intercepted by field operatives who only communicate in monosyllables.", "probability": 9},
+            {"text": "The letter 'K' represents the 11th hour of the apocalypse; your friendship has shifted into an alternate timeline.", "probability": 4},
         ]
         action = "Draft a 14-page handwritten letter via carrier pigeon demanding clarification on letter capitalization."
         confidence = "98.7% Paranoia Quotient"
 
-    elif any(k in q_lower for k in ["boss", "manager", "work", "email", "slack", "fired", "promotion", "period", "meeting"]):
+    elif any(k in q_lower for k in ["boss", "manager", "work", "email", "slack", "fired", "promotion", "period"]):
         possibilities = [
             {"text": "They use standard punctuation on everything because they are over 35 years old.", "probability": 45},
             {"text": "They were rushing between back-to-back quarterly synchronizations and didn't notice the abrupt tone.", "probability": 26},
             {"text": "They noticed you spent 14 minutes looking at Wikipedia instead of updating Jira tickets.", "probability": 16},
             {"text": "HR has already generated an automated replacement clone that drinks less iced coffee.", "probability": 9},
-            {"text": "The period at the end of the sentence is an encoded GPS beacon summoning corporate auditors to confiscate your swivel chair.", "probability": 4},
+            {"text": "The period at the end of the sentence is an encoded GPS beacon summoning corporate auditors.", "probability": 4},
         ]
         action = "Preemptively submit a resignation letter in Morse code, then hide under your desk in high-visibility apparel."
         confidence = "104% Workplace Anxiety"
@@ -209,19 +225,18 @@ def generate_offline_absurdities(query: str) -> dict:
         confidence = "93.4% Interspecies Certainty"
 
     else:
-        # General absurd synthesis using words from the query
         keywords = re.findall(r'\b\w{4,}\b', query)
         kw = keywords[0].capitalize() if keywords else "This Situation"
         kw2 = keywords[1].capitalize() if len(keywords) > 1 else "The Universe"
 
         possibilities = [
-            {"text": f"The most boring explanation is true: circumstances aligned by pure coincidence regarding {kw.lower()}.", "probability": 41},
-            {"text": f"Someone noticed your hesitation regarding {kw.lower()} and is reacting cautiously.", "probability": 28},
-            {"text": f"An unspoken social script was breached, triggering a silent loop of mutual second-guessing about {kw2.lower()}.", "probability": 18},
+            {"text": f"The most ordinary explanation applies: everyday circumstances aligned regarding {kw.lower()}.", "probability": 41},
+            {"text": f"Someone noticed your hesitation regarding {kw.lower()} and is reacting with mild caution.", "probability": 28},
+            {"text": f"An unspoken social protocol was breached, triggering a quiet loop of mutual second-guessing about {kw2.lower()}.", "probability": 18},
             {"text": f"A secretive shadow council decided today was the ideal date to test your coping bandwidth.", "probability": 9},
-            {"text": f"A microscopic rift in spacetime swapped your original timeline with one where {kw.lower()} governs the laws of physics.", "probability": 4},
+            {"text": f"A microscopic rift in spacetime swapped your original timeline with one where {kw.lower()} governs physics.", "probability": 4},
         ]
-        action = f"Immediately burn all receipts, delete cache, and speak only in ancient proverbs regarding {kw.lower()}."
+        action = f"Immediately delete browser cache, change your Wi-Fi name, and speak only in ancient proverbs regarding {kw.lower()}."
         confidence = "99.1% Unearned Certainty"
 
     return {
@@ -232,38 +247,31 @@ def generate_offline_absurdities(query: str) -> dict:
 
 
 async def call_gemini(api_key: str, query: str) -> dict:
-    """Call Google Gemini API using official SDK or direct endpoint."""
-    try:
-        from google import genai
-        client = genai.Client(api_key=api_key)
-        prompt = f"{SYSTEM_PROMPT}\n\nUser Question to Overthink: {query}"
-        
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        
-        text = response.text.strip()
-        # Clean markdown wrappers if model enclosed JSON in ```json ... ```
-        if text.startswith("```"):
-            text = re.sub(r"^```[a-zA-Z]*\n", "", text)
-            text = re.sub(r"\n```$", "", text)
-        return json.loads(text)
-    except Exception as e:
-        logger.warning(f"Google Gemini SDK call failed ({e}). Falling back to REST.")
-        # Fallback to direct REST API
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-        payload = {
-            "contents": [{
-                "parts": [{"text": f"{SYSTEM_PROMPT}\n\nUser Question to Overthink: {query}"}]
-            }],
-            "generationConfig": {"responseMimeType": "application/json"}
+    """Call Google Gemini API using direct REST endpoint for maximum reliability."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    prompt = f"{SYSTEM_PROMPT}\n\nUser Question to Overthink: {query}"
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "temperature": 0.7
         }
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            res = await client.post(url, json=payload)
-            res_json = res.json()
-            raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"]
-            return json.loads(raw_text)
+    }
+    async with httpx.AsyncClient(timeout=25.0) as client:
+        res = await client.post(url, json=payload)
+        if res.status_code != 200:
+            raise RuntimeError(f"Gemini API returned HTTP {res.status_code}: {res.text}")
+        
+        res_json = res.json()
+        raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+        
+        if raw_text.startswith("```"):
+            raw_text = re.sub(r"^```[a-zA-Z]*\n", "", raw_text)
+            raw_text = re.sub(r"\n```$", "", raw_text)
+            
+        return json.loads(raw_text)
 
 
 async def call_grok(api_key: str, query: str) -> dict:
@@ -294,7 +302,6 @@ async def call_grok(api_key: str, query: str) -> dict:
 # Routes
 @app.get("/")
 def read_root():
-    # If index.html exists in parent workspace directory, serve it!
     index_file = Path(__file__).resolve().parent.parent / "index.html"
     if index_file.exists() and index_file.stat().st_size > 10:
         return FileResponse(index_file)
@@ -312,6 +319,9 @@ def health_check():
 
 @app.post("/api/search", response_model=SearchResponse)
 async def search(request: SearchRequest):
+    # Always reload .env dynamically to catch key updates instantly
+    load_dotenv(dotenv_path=env_path, override=True)
+
     query = request.query
     if not isinstance(query, str):
         raise HTTPException(
@@ -341,9 +351,9 @@ async def search(request: SearchRequest):
     # 1. Try Gemini if configured
     if gemini_key and gemini_key not in ["your_gemini_api_key_here", "your_key_here", ""]:
         try:
-            logger.info("Attempting inference with Gemini...")
+            logger.info("Attempting inference with Gemini 2.5 Flash API...")
             data = await call_gemini(gemini_key, stripped_query)
-            engine_used = "Google Gemini 2.5 Flash"
+            engine_used = "Google Gemini 2.5 Flash AI Engine"
         except Exception as e:
             logger.error(f"Gemini API attempt failed: {e}")
 
@@ -352,13 +362,13 @@ async def search(request: SearchRequest):
         try:
             logger.info("Attempting inference with xAI Grok...")
             data = await call_grok(xai_key, stripped_query)
-            engine_used = "xAI Grok 2"
+            engine_used = "xAI Grok 2 AI Engine"
         except Exception as e:
             logger.error(f"Grok API attempt failed: {e}")
 
-    # 3. If no API key or both failed, gracefully fallback to the absurd offline engine!
+    # 3. Fallback to contextual absurd generator if API keys fail or unavailable
     if not data:
-        logger.info("Using context-aware Offline Absurd Engine (zero-failure mode).")
+        logger.info("Using context-aware Offline Absurd Engine.")
         data = generate_offline_absurdities(stripped_query)
         engine_used = "Multiverse Quantum Simulator (Offline Engine)"
 
